@@ -104,6 +104,16 @@ const validateRange = ({ key, value, min, max }) => {
     );
   }
 };
+const validateHasDuplicated = (key, values) => {
+  if (new Set(values).size !== values.length) {
+    throw new Error(ERROR_MESSAGE.COMMON.DUPLICATE(key));
+  }
+};
+const validateCount = (key, value) => {
+  if (value.length !== LOTTO.NUMBER_LENGTH) {
+    throw new Error(ERROR_MESSAGE.COMMON.INVALID_COUNT(key));
+  }
+};
 class Lotto {
   constructor(numbers) {
     __privateAdd(this, _Lotto_instances);
@@ -367,37 +377,95 @@ const OutputView = {
     LottoResultModal.openModal();
   }
 };
+const validateUnit = (purchasePrice) => {
+  if (purchasePrice % PURCHASE_PRICE.UNIT !== 0) {
+    throw new Error(ERROR_MESSAGE.PURCHASE.INVALID_UNIT);
+  }
+};
+const PurchasePriceValidator = {
+  validate: (purchasePrice) => {
+    validateType(KEY.PURCHASE_PRICE, purchasePrice);
+    validateRange({
+      key: KEY.PURCHASE_PRICE,
+      value: purchasePrice,
+      min: PURCHASE_PRICE.MIN,
+      max: PURCHASE_PRICE.MAX
+    });
+    validateUnit(purchasePrice);
+  }
+};
+const validateTypeAll = (winningNumbers) => {
+  winningNumbers.forEach((number) => {
+    validateType(KEY.WINNING_NUMBERS, number);
+  });
+};
+const validateRangeAll = (winningNumbers) => {
+  winningNumbers.forEach((number) => {
+    validateRange({
+      key: KEY.WINNING_NUMBERS,
+      value: number,
+      min: LOTTO.MIN_NUMBER,
+      max: LOTTO.MAX_NUMBER
+    });
+  });
+};
+const WinningNumbersValidator = {
+  validate: (winningNumbers) => {
+    validateTypeAll(winningNumbers);
+    validateCount(KEY.WINNING_NUMBERS, winningNumbers);
+    validateRangeAll(winningNumbers);
+    validateHasDuplicated(KEY.WINNING_NUMBERS, winningNumbers);
+  }
+};
 const InputView = {
   $purchaseInput: getById("purchaseInput"),
   $purchaseForm: document.querySelector("section.purchase form"),
   enterPurchasePrice() {
-    const self = this;
     return new Promise((resolve) => {
       function handleSubmit(e) {
         e.preventDefault();
         try {
-          resolve(self.getPurchasePrice());
+          resolve(InputView.getPurchasePrice());
         } catch (error) {
           alert(error.message);
-          self.resetPurchaseInput();
+          InputView.resetPurchaseInput();
         }
       }
       this.$purchaseForm.addEventListener("submit", handleSubmit);
     });
   },
+  getPurchasePrice() {
+    const purchasePrice = Number(this.$purchaseInput.value);
+    PurchasePriceValidator.validate(Number(this.$purchaseInput.value));
+    const lottoCount = purchasePrice / PURCHASE_PRICE.UNIT;
+    return { purchasePrice, lottoCount };
+  },
+  resetPurchaseInput() {
+    this.$purchaseInput.focus();
+    this.$purchaseInput.value = "";
+  },
   async enterWinningAndBonusNumber() {
-    const self = this;
     const $resultButton = getByClass("resultButton")[0];
     return new Promise((resolve) => {
       $resultButton.addEventListener("click", (e) => {
         e.preventDefault();
         try {
-          resolve(self.getWinningAndBonusNumbers());
+          resolve(InputView.getWinningAndBonusNumbers());
         } catch (error) {
           alert(error.message);
         }
       });
     });
+  },
+  getWinningAndBonusNumbers() {
+    const winningNumbers = Array.from({ length: 6 }, (_, idx) => idx + 1).map(
+      (idx) => Number(getById(`winningNumber_${idx}`).value)
+    );
+    const bonusNumber = Number(getById("bonusNumber").value);
+    WinningNumbersValidator.validate(winningNumbers);
+    BonusNumberValidator.validate(bonusNumber, winningNumbers);
+    LottoResultModal.openModal();
+    return { winningNumbers, bonusNumber };
   }
 };
 const retryUntilValidInWeb = async (func, ...arg) => {
