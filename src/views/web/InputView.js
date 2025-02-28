@@ -14,7 +14,12 @@ const InputView = {
       this.$purchaseForm.addEventListener('submit', (e) => {
         e.preventDefault();
         try {
-          console.log(this);
+          console.log('this 객체:', this);
+          console.log('this 타입:', Object.prototype.toString.call(this));
+          console.log('this.getPurchasePrice 존재 여부:', 'getPurchasePrice' in this);
+          console.log('this.getPurchasePrice 타입:', typeof this.getPurchasePrice);
+          console.log('InputView.getPurchasePrice 존재 여부:', 'getPurchasePrice' in InputView);
+
           resolve(this.getPurchasePrice());
         } catch (error) {
           alert(error.message);
