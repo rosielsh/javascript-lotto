@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>🎱 행운의 로또</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script type="module" crossorigin src="/javascript-lotto/assets/index-GcNrDUQj.js"></script>
+    <link rel="stylesheet" crossorigin href="/javascript-lotto/assets/index-8mLVhw6t.css">
+  </head>
+
+  <body>
+    <div id="app">
+      <header>🎱 행운의 로또</header>
+      <main>
+        <h1>🎱 내 번호 당첨 확인 🎱</h1>
+        <!-- 구매폼 -->
+        <section class="purchase">
+          <form>
+            <label for="purchaseInput">구입할 금액을 입력해주세요.</label>
+            <div class="flex purchaseBox">
+              <input id="purchaseInput" type="text" placeholder="금액" />
+              <input id="purchaseButton" type="submit" value="구입" />
+            </div>
+          </form>
+        </section>
+        <!-- 로또 리스트 -->
+        <div class="hiddenContainer flex hidden">
+          <section class="lottoList"></section>
+          <!-- 당첨번호, 보너스번호 폼 -->
+          <section class="winningNumbers">
+            <div>지난 주 당첨번호 6개와 보너스 번호 1개를 입력해주세요.</div>
+            <div class="flex">
+              <div class="flex winningNumbersText">
+                <div>당첨 번호</div>
+                <div>보너스 번호</div>
+              </div>
+              <div class="winningNumbersInput"></div>
+            </div>
+          </section>
+          <button class="resultButton">결과 확인하기</button>
+        </div>
+
+        <!-- 결과 모달 -->
+        <section class="modalContainer hidden">
+          <div class="modalBackground"></div>
+          <div class="modalContent">
+            <button class="closeButton">x</button>
+            <h2>🏆 당첨 통계 🏆</h2>
+            <table class="lottoResultTable">
+              <thead>
+                <tr>
+                  <th>일치 갯수</th>
+                  <th>당첨금</th>
+                  <th>당첨 갯수</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            <div class="profitText"></div>
+            <button class="resetButton">다시 시작하기</button>
+          </div>
+        </section>
+      </main>
+      <footer>Copyright 2025. woowacourse</footer>
+    </div>
+  </body>
+</html>
