@@ -372,7 +372,7 @@ const InputView = {
   $purchaseForm: document.querySelector("section.purchase form"),
   enterPurchasePrice() {
     return new Promise((resolve) => {
-      this.$purchaseForm.addEventListener("submit", (e) => {
+      function handleSubmit(e) {
         e.preventDefault();
         try {
           resolve(this.getPurchasePrice());
@@ -380,7 +380,8 @@ const InputView = {
           alert(error.message);
           this.resetPurchaseInput();
         }
-      });
+      }
+      this.$purchaseForm.addEventListener("submit", handleSubmit.bind(this));
     });
   },
   async enterWinningAndBonusNumber() {
