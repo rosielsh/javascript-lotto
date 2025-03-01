@@ -6,7 +6,7 @@ var __privateGet = (obj, member, getter) => (__accessCheck(obj, member, "read fr
 var __privateAdd = (obj, member, value) => member.has(obj) ? __typeError("Cannot add the same private member more than once") : member instanceof WeakSet ? member.add(obj) : member.set(obj, value);
 var __privateSet = (obj, member, value, setter) => (__accessCheck(obj, member, "write to private field"), setter ? setter.call(obj, value) : member.set(obj, value), value);
 var __privateMethod = (obj, member, method) => (__accessCheck(obj, member, "access private method"), method);
-var _numbers, _Lotto_instances, validate_fn, checkType_fn, checkLength_fn, checkRange_fn, checkDuplicated_fn, _lottos, _LottoMachine_instances, generateLottos_fn, generateLotto_fn, validateLottoCount_fn, _winningNumbers, _bonusNumber, _WinningResult_instances, getMatchCount_fn;
+var _numbers, _Lotto_instances, validate_fn, checkType_fn, checkLength_fn, checkRange_fn, checkDuplicated_fn, _lottos, _LottoMachine_instances, generateLottos_fn, generateLotto_fn, validateLottoCount_fn, _winningNumbers, _bonusNumber, _WinningResult_instances, getMatchCount_fn, _lottos2, _WebController_instances, initializeEvent_fn, initializeUI_fn, addClickEvent_fn, addSubmitEvent_fn, handlePurchase_fn, handleLottoResult_fn, getWinningResult_fn, handleReset_fn;
 (function polyfill() {
   const relList = document.createElement("link").relList;
   if (relList && relList.supports && relList.supports("modulepreload")) {
@@ -187,59 +187,6 @@ validateLottoCount_fn = function(count) {
     max: PURCHASE_PRICE.MAX / PURCHASE_PRICE.UNIT
   });
 };
-const validateDuplicate = (bonusNumber, winningNumbers) => {
-  if (winningNumbers.includes(bonusNumber)) {
-    throw new Error(ERROR_MESSAGE.BONUS_NUMBER.DUPLICATE);
-  }
-};
-const BonusNumberValidator = {
-  validate: (bonusNumber, winningNumbers) => {
-    validateType(KEY.BONUS_NUMBER, bonusNumber);
-    validateRange({
-      key: KEY.BONUS_NUMBER,
-      value: bonusNumber,
-      min: LOTTO.MIN_NUMBER,
-      max: LOTTO.MAX_NUMBER
-    });
-    validateDuplicate(bonusNumber, winningNumbers);
-  }
-};
-class WinningResult {
-  constructor(winningNumbers, bonusNumber) {
-    __privateAdd(this, _WinningResult_instances);
-    __privateAdd(this, _winningNumbers);
-    __privateAdd(this, _bonusNumber);
-    __privateSet(this, _winningNumbers, new Lotto(winningNumbers).numbers);
-    BonusNumberValidator.validate(bonusNumber, winningNumbers);
-    __privateSet(this, _bonusNumber, bonusNumber);
-  }
-  calculate(lottos) {
-    const counts = Array(5).fill(0);
-    lottos.forEach((lotto) => {
-      const matchCount = __privateMethod(this, _WinningResult_instances, getMatchCount_fn).call(this, lotto);
-      if (matchCount === 6) counts[4] += 1;
-      if (matchCount === 5 && lotto.numbers.includes(__privateGet(this, _bonusNumber))) counts[3] += 1;
-      if (matchCount === 5 && !lotto.numbers.includes(__privateGet(this, _bonusNumber))) counts[2] += 1;
-      if (matchCount === 4) counts[1] += 1;
-      if (matchCount === 3) counts[0] += 1;
-    });
-    return counts;
-  }
-  calculateProfitRate(lottoPurchasePrice, counts) {
-    const totalReward = counts.reduce((acc, curr, i) => {
-      return acc + curr * PROFIT[i];
-    }, 0);
-    return (totalReward - lottoPurchasePrice) / lottoPurchasePrice * 100;
-  }
-}
-_winningNumbers = new WeakMap();
-_bonusNumber = new WeakMap();
-_WinningResult_instances = new WeakSet();
-getMatchCount_fn = function(lotto) {
-  const sumSet = /* @__PURE__ */ new Set([...lotto.numbers, ...__privateGet(this, _winningNumbers)]);
-  const matchCount = lotto.numbers.length + __privateGet(this, _winningNumbers).length - sumSet.size;
-  return matchCount;
-};
 const getById = (id) => document.getElementById(id);
 const getByClass = (className) => document.getElementsByClassName(className);
 const getByTag = (tagName) => document.getElementsByTagName(tagName);
@@ -317,28 +264,18 @@ const LottoResultModal = {
   },
   closeModal() {
     this.$modalContainer.classList.add("hidden");
-  },
-  resetLotto() {
-    getById("purchaseInput").value = "";
-    getByClass("lottoList")[0].replaceChildren();
-    getByClass("winningNumbersInput")[0].replaceChildren();
-    getByTag("tbody")[0].replaceChildren();
-    enableElement("purchaseInput");
-    enableElement("purchaseButton");
-    hideElement(getByClass("hiddenContainer")[0]);
+    querySelector(".lottoResultTable > tbody").replaceChildren();
   }
 };
 const OutputView = {
+  $hiddenContainer: getByClass("hiddenContainer")[0],
+  $lottoList: getByClass("lottoList")[0],
   printPurchaseLottos(lottoCount, lottos) {
-    const $lottoList = getByClass("lottoList")[0];
     const $lottoCountDescDiv = createContainer("div", { padding: "1rem 0" });
     $lottoCountDescDiv.textContent = `총 ${lottoCount}개를 구매하였습니다.`;
-    $lottoList.appendChild($lottoCountDescDiv);
-    this.printLottos(lottos, $lottoList);
-    const $hiddenContainer = getByClass("hiddenContainer")[0];
-    showElement($hiddenContainer);
-    this.disablePurchase();
-    this.generateWinningAndBonusInput();
+    this.$lottoList.appendChild($lottoCountDescDiv);
+    this.printLottos(lottos, this.$lottoList);
+    this.processAfterPurchase();
   },
   printLottos(lottos, $target) {
     const $lottoListDiv = createContainer("div", {});
@@ -362,9 +299,15 @@ const OutputView = {
     $lottoDiv.appendChild($lottoText);
     $lottoListDiv.appendChild($lottoDiv);
   },
+  processAfterPurchase() {
+    showElement(this.$hiddenContainer);
+    this.disablePurchase();
+    this.generateWinningAndBonusInput();
+  },
   disablePurchase() {
     disableElement("purchaseInput");
     disableElement("purchaseButton");
+    getById("purchaseButton").classList.add("disabled");
   },
   generateWinningAndBonusInput() {
     const $winningNumbersInput = getByClass("winningNumbersInput")[0];
@@ -375,7 +318,73 @@ const OutputView = {
     LottoResultModal.createTable(winningCounts);
     LottoResultModal.createProfit(profitRate);
     LottoResultModal.openModal();
+  },
+  resetLottoUI() {
+    LottoResultModal.closeModal();
+    hideElement(this.$hiddenContainer);
+    this.enablePurchase();
+    this.$lottoList.replaceChildren();
+    getByClass("winningNumbersInput")[0].replaceChildren();
+    getByTag("tbody")[0].replaceChildren();
+  },
+  enablePurchase() {
+    enableElement("purchaseInput");
+    enableElement("purchaseButton");
+    getById("purchaseButton").classList.remove("disabled");
   }
+};
+const validateDuplicate = (bonusNumber, winningNumbers) => {
+  if (winningNumbers.includes(bonusNumber)) {
+    throw new Error(ERROR_MESSAGE.BONUS_NUMBER.DUPLICATE);
+  }
+};
+const BonusNumberValidator = {
+  validate: (bonusNumber, winningNumbers) => {
+    validateType(KEY.BONUS_NUMBER, bonusNumber);
+    validateRange({
+      key: KEY.BONUS_NUMBER,
+      value: bonusNumber,
+      min: LOTTO.MIN_NUMBER,
+      max: LOTTO.MAX_NUMBER
+    });
+    validateDuplicate(bonusNumber, winningNumbers);
+  }
+};
+class WinningResult {
+  constructor(winningNumbers, bonusNumber) {
+    __privateAdd(this, _WinningResult_instances);
+    __privateAdd(this, _winningNumbers);
+    __privateAdd(this, _bonusNumber);
+    __privateSet(this, _winningNumbers, new Lotto(winningNumbers).numbers);
+    BonusNumberValidator.validate(bonusNumber, winningNumbers);
+    __privateSet(this, _bonusNumber, bonusNumber);
+  }
+  calculate(lottos) {
+    const counts = Array(5).fill(0);
+    lottos.forEach((lotto) => {
+      const matchCount = __privateMethod(this, _WinningResult_instances, getMatchCount_fn).call(this, lotto);
+      if (matchCount === 6) counts[4] += 1;
+      if (matchCount === 5 && lotto.numbers.includes(__privateGet(this, _bonusNumber))) counts[3] += 1;
+      if (matchCount === 5 && !lotto.numbers.includes(__privateGet(this, _bonusNumber))) counts[2] += 1;
+      if (matchCount === 4) counts[1] += 1;
+      if (matchCount === 3) counts[0] += 1;
+    });
+    return counts;
+  }
+  calculateProfitRate(lottoPurchasePrice, counts) {
+    const totalReward = counts.reduce((acc, curr, i) => {
+      return acc + curr * PROFIT[i];
+    }, 0);
+    return (totalReward - lottoPurchasePrice) / lottoPurchasePrice * 100;
+  }
+}
+_winningNumbers = new WeakMap();
+_bonusNumber = new WeakMap();
+_WinningResult_instances = new WeakSet();
+getMatchCount_fn = function(lotto) {
+  const sumSet = /* @__PURE__ */ new Set([...lotto.numbers, ...__privateGet(this, _winningNumbers)]);
+  const matchCount = lotto.numbers.length + __privateGet(this, _winningNumbers).length - sumSet.size;
+  return matchCount;
 };
 const validateUnit = (purchasePrice) => {
   if (purchasePrice % PURCHASE_PRICE.UNIT !== 0) {
@@ -420,96 +429,102 @@ const WinningNumbersValidator = {
 const InputView = {
   $purchaseInput: getById("purchaseInput"),
   $purchaseForm: document.querySelector("section.purchase form"),
+  $resultButton: getByClass("resultButton")[0],
   enterPurchasePrice() {
-    return new Promise((resolve) => {
-      function handleSubmit(e) {
-        e.preventDefault();
-        try {
-          resolve(InputView.getPurchasePrice());
-        } catch (error) {
-          alert(error.message);
-          InputView.resetPurchaseInput();
-        }
-      }
-      this.$purchaseForm.addEventListener("submit", handleSubmit);
-    });
-  },
-  getPurchasePrice() {
     const purchasePrice = Number(this.$purchaseInput.value);
-    PurchasePriceValidator.validate(Number(this.$purchaseInput.value));
+    PurchasePriceValidator.validate(purchasePrice);
     const lottoCount = purchasePrice / PURCHASE_PRICE.UNIT;
-    return { purchasePrice, lottoCount };
+    return lottoCount;
   },
-  resetPurchaseInput() {
-    this.$purchaseInput.focus();
-    this.$purchaseInput.value = "";
-  },
-  async enterWinningAndBonusNumber() {
-    const $resultButton = getByClass("resultButton")[0];
-    return new Promise((resolve) => {
-      $resultButton.addEventListener("click", (e) => {
-        e.preventDefault();
-        try {
-          resolve(InputView.getWinningAndBonusNumbers());
-        } catch (error) {
-          alert(error.message);
-        }
-      });
-    });
-  },
-  getWinningAndBonusNumbers() {
+  enterWinningAndBonusNumber() {
     const winningNumbers = Array.from({ length: 6 }, (_, idx) => idx + 1).map(
       (idx) => Number(getById(`winningNumber_${idx}`).value)
     );
     const bonusNumber = Number(getById("bonusNumber").value);
     WinningNumbersValidator.validate(winningNumbers);
     BonusNumberValidator.validate(bonusNumber, winningNumbers);
-    LottoResultModal.openModal();
     return { winningNumbers, bonusNumber };
-  }
-};
-const retryUntilValidInWeb = async (func, ...arg) => {
-  try {
-    return await func(...arg);
-  } catch (error) {
-    return retryUntilValidInWeb(func, ...arg);
-  }
-};
-const WebController = {
-  async start() {
-    const { purchasePrice, lottos } = await this.processLottoPurchase();
-    const winningResult = await this.generateWinningResult();
-    const winningCounts = winningResult.calculate(lottos);
-    const profitRate = winningResult.calculateProfitRate(purchasePrice, winningCounts);
-    OutputView.showModal(winningCounts, profitRate);
   },
-  async processLottoPurchase() {
-    const { purchasePrice, lottoCount } = await retryUntilValidInWeb(
-      async () => await InputView.enterPurchasePrice()
-    );
-    const lottoMachine = new LottoMachine(lottoCount);
-    OutputView.printPurchaseLottos(lottoCount, lottoMachine.lottos);
-    return { purchasePrice, lottos: lottoMachine.lottos };
-  },
-  async generateWinningResult() {
-    const { winningNumbers, bonusNumber } = await retryUntilValidInWeb(
-      async () => await InputView.enterWinningAndBonusNumber()
-    );
-    return new WinningResult(winningNumbers, bonusNumber);
+  resetPurchaseInput() {
+    this.$purchaseInput.focus();
+    this.$purchaseInput.value = "";
   }
 };
-const addClickListener = (className, callback) => {
-  const $target = getByClass(className)[0];
-  $target.addEventListener("click", callback);
+class WebController {
+  constructor() {
+    __privateAdd(this, _WebController_instances);
+    __privateAdd(this, _lottos2);
+    __privateSet(this, _lottos2, []);
+  }
+  start() {
+    __privateMethod(this, _WebController_instances, initializeEvent_fn).call(this);
+    __privateMethod(this, _WebController_instances, initializeUI_fn).call(this);
+  }
+}
+_lottos2 = new WeakMap();
+_WebController_instances = new WeakSet();
+initializeEvent_fn = function() {
+  const $app = getById("app");
+  $app.addEventListener("click", __privateMethod(this, _WebController_instances, addClickEvent_fn).bind(this));
+  $app.addEventListener("submit", __privateMethod(this, _WebController_instances, addSubmitEvent_fn).bind(this));
 };
-const initializeEvent = () => {
-  addClickListener("closeButton", () => LottoResultModal.closeModal());
-  addClickListener("modalBackground", () => LottoResultModal.closeModal());
-  addClickListener("resetButton", () => {
+initializeUI_fn = function() {
+  InputView.resetPurchaseInput();
+};
+addClickEvent_fn = function(event) {
+  const { target } = event;
+  if (target.closest(".closeButton") || target.closest(".modalBackground")) {
     LottoResultModal.closeModal();
-    LottoResultModal.resetLotto();
-    WebController.start();
-  });
+    return;
+  }
+  if (target.closest(".resultButton")) {
+    event.preventDefault();
+    __privateMethod(this, _WebController_instances, handleLottoResult_fn).call(this);
+    return;
+  }
+  if (target.closest(".resetButton")) {
+    __privateMethod(this, _WebController_instances, handleReset_fn).call(this);
+  }
 };
-initializeEvent();
-WebController.start();
+addSubmitEvent_fn = function(event) {
+  if (event.target.closest("section.purchase form")) {
+    event.preventDefault();
+    __privateMethod(this, _WebController_instances, handlePurchase_fn).call(this);
+  }
+};
+handlePurchase_fn = function() {
+  try {
+    const lottoCount = InputView.enterPurchasePrice();
+    const lottoMachine = new LottoMachine(lottoCount);
+    __privateSet(this, _lottos2, lottoMachine.lottos);
+    OutputView.printPurchaseLottos(lottoCount, lottoMachine.lottos);
+  } catch (error) {
+    alert(error.message);
+    InputView.resetPurchaseInput();
+  }
+};
+handleLottoResult_fn = function() {
+  try {
+    const { winningNumbers, bonusNumber } = InputView.enterWinningAndBonusNumber();
+    const { winningCounts, profitRate } = __privateMethod(this, _WebController_instances, getWinningResult_fn).call(this, winningNumbers, bonusNumber);
+    OutputView.showModal(winningCounts, profitRate);
+  } catch (error) {
+    alert(error.message);
+  }
+};
+getWinningResult_fn = function(winningNumbers, bonusNumber) {
+  const winningResult = new WinningResult(winningNumbers, bonusNumber);
+  const winningCounts = winningResult.calculate(__privateGet(this, _lottos2));
+  const profitRate = winningResult.calculateProfitRate(
+    __privateGet(this, _lottos2).length * PURCHASE_PRICE.UNIT,
+    winningCounts
+  );
+  return { winningCounts, profitRate };
+};
+handleReset_fn = function() {
+  InputView.resetPurchaseInput();
+  OutputView.resetLottoUI();
+  __privateSet(this, _lottos2, []);
+};
+const webController = new WebController();
+webController.start();
